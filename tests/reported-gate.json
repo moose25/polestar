@@ -1402,6 +1402,9 @@
 		] },
 		"2619": { "tests": [
 			{ "cargo": "forge-addontest", "target": "addontest", "file": "rust/crates/forge-addontest/tests/addontest/engine-sections.rs", "test": "a_profession_guide_starts_at_the_player_s_skill_asks_only_for_what_is_still_needed_and_keeps_a_missing_rank" }
+		] },
+		"2610": { "tests": [
+			{ "cargo": "forge-addontest", "target": "addontest", "file": "rust/crates/forge-addontest/tests/addontest/engine-when.rs", "test": "a_step_when_onquest_that_hands_the_quest_in_stays_for_its_follow_up_2610" }
 		] }
 	},
 	"seedDrift": {

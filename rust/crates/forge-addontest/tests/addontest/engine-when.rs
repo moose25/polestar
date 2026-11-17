@@ -407,3 +407,54 @@ emit({
 		})
 	);
 }
+
+// #2610 (Malifax, 0.4.0, Horde Thousand Needles): a step `when onquest Q` that hands Q in and takes its follow-up
+// (Moktar Krin: turnin 1146, accept 1147). The hand-in ends `onquest Q`; the step stays until its follow-up is
+// taken, rather than being passed (and stored as skipped) with the accept still open.
+#[test]
+fn a_step_when_onquest_that_hands_the_quest_in_stays_for_its_follow_up_2610() {
+	let guide = r#"
+Polestar.RegisterGuide({
+	id = "test/when", pack = "test", title = "When", minLevel = 1, maxLevel = 10,
+	steps = {
+		{ title = "Deputy Willem", goals = {
+			{ t = "accept", quest = 776, title = "Rest and Relaxation", npc = 823, npcName = "Deputy Willem", map = 1429, x = 48.2, y = 42.0 },
+		} },
+		{ title = "Marshal McBride", when = { { k = "onquest", q = { 783 } } }, goals = {
+			{ t = "turnin", quest = 783, title = "A Threat Within", npc = 197, npcName = "Marshal McBride", map = 1429, x = 48.9, y = 41.6 },
+			{ t = "accept", quest = 7, title = "Kobold Camp Cleanup", npc = 197, npcName = "Marshal McBride", map = 1429, x = 48.9, y = 41.6 },
+		} },
+		{ title = "Innkeeper", goals = {
+			{ t = "turnin", quest = 776, title = "Rest and Relaxation", npc = 6774, npcName = "Falkhaan Isenstrider", map = 1429, x = 43.3, y = 65.7 },
+		} },
+	},
+})
+"#;
+	let out = emitted(&RunAddon {
+		stubs: vec!["stub_world.lua"],
+		before: format!("{WORLD}w.onQuest(783, {{}}); w.onQuest(776, {{}})"),
+		addons: vec![core()],
+		saved: vec![("Polestar".into(), DEFAULT_SAVED.into())],
+		script: [
+			TEST_PACK,
+			TEST_SOURCE,
+			guide,
+			HELPERS,
+			"stub.login()",
+			r#"stub.fire("QUEST_LOG_UPDATE"); stub.advance(0.6)"#,
+			r#"
+				emit(state())
+				stub.world.turnIn(783); flush()
+				emit(state())
+				stub.world.accept(7, {}); flush()
+				emit(state())
+			"#,
+		]
+		.join("\n"),
+		..Default::default()
+	});
+	assert_eq!(out[0], json!({ "live": 2, "status": "current" }));
+	// Handed in, the follow-up still to take: the step stays the live one.
+	assert_eq!(out[1], json!({ "live": 2, "status": "current" }));
+	assert_eq!(out[2], json!({ "live": 3, "status": "done" }));
+}

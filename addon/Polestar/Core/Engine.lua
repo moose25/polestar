@@ -1154,11 +1154,32 @@ end
 -- `when dungeon` of a dungeon not answered yet holds while the step asks and
 -- has something to do now (Own.dungeonAsks, Own.dungeonOpen): the route stops
 -- there and asks; any other step of it waits for the answer, as for Skip.
+-- A `when onquest` holds on after the step's own hand-in of the quest: the
+-- step hands it in and takes its follow-up (Moktar Krin: turnin 1146, then
+-- accept 1147, #2610), and the hand-in alone must not pass the step with
+-- the follow-up still to take.
 function Own.predicateFails(step, p)
 	if p.k == "dungeon" and not p.neg and Own.dungeonAnswer(p.map) == nil then
 		return not (Own.dungeonAsks(step) and Own.dungeonOpen(step))
 	end
-	return not Own.predicateHolds(p)
+	if Own.predicateHolds(p) then return false end
+	return not (p.k == "onquest" and not p.neg and Own.handedInHere(step, p.q))
+end
+
+-- Whether step hands in one of quests qs (a list or one id) that is done.
+function Own.handedInHere(step, qs)
+	for _, goal in ipairs(step.goals or NONE) do
+		if goal.t == "turnin" and goal.quest and questDone(goal.quest) then
+			if type(qs) == "table" then
+				for i = 1, #qs do
+					if qs[i] == goal.quest then return true end
+				end
+			elseif qs == goal.quest then
+				return true
+			end
+		end
+	end
+	return false
 end
 
 -- The first predicate of a step's `when` that does not hold now, or nil.
